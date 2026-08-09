@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MatDB — Materials data, extracted from the literature</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1F2EE;
+    --paper-raised:#FAFAF7;
+    --ink:#14181D;
+    --graphite:#4A5058;
+    --steel:#2F6E8F;
+    --steel-dark:#1F4E68;
+    --signal:#C97A3D;
+    --line:#D7D8D1;
+    --line-strong:#B8BAB1;
+    --radius:10px;
+    --wrap:1160px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  a{ color:inherit; text-decoration:none; }
+  .wrap{ max-width:var(--wrap); margin:0 auto; padding:0 32px; }
+  section{ padding:120px 0; border-bottom:1px solid var(--line); }
+  section:last-of-type{ border-bottom:none; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--steel-dark);
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:20px;
+  }
+  .eyebrow::before{ content:''; width:16px; height:1px; background:var(--steel); display:inline-block; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:13px 24px;
+    border-radius:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    border:1px solid transparent;
+    transition:transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  button.btn{ appearance:none; -webkit-appearance:none; }
+  .btn-primary{ background:var(--ink); color:var(--paper-raised); }
+  .btn-primary:hover{ transform:translateY(-1px); background:var(--steel-dark); }
+  .btn-ghost{ border-color:var(--line-strong); color:var(--ink); background:transparent; }
+  .btn-ghost:hover{ border-color:var(--ink); }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    background:rgba(241,242,238,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{ display:flex; align-items:center; justify-content:space-between; padding-top:18px; padding-bottom:18px; }
+  .logo{ display:flex; align-items:center; gap:10px; font-family:'Space Grotesk'; font-weight:600; font-size:18px; }
+  .logo-mark{ width:22px; height:22px; position:relative; flex-shrink:0; }
+  .nav-links{ display:flex; gap:36px; font-size:14px; }
+  .nav-links a{ color:var(--graphite); transition:color .15s; }
+  .nav-links a:hover{ color:var(--ink); }
+  .nav-cta{ display:flex; align-items:center; gap:24px; }
+  .nav-toggle{ display:none; }
+
+  /* ---------- HERO ---------- */
+  #hero{
+    padding-top:180px;
+    padding-bottom:100px;
+    position:relative;
+    overflow:hidden;
+    border-bottom:1px solid var(--line);
+  }
+  .lattice-bg{
+    position:absolute; inset:0; z-index:0; opacity:0.5;
+    background-image: radial-gradient(circle, var(--line-strong) 1px, transparent 1px);
+    background-size:28px 28px;
+    mask-image: linear-gradient(to bottom, black, transparent 85%);
+  }
+  .hero-grid{ position:relative; z-index:1; display:grid; grid-template-columns:1.1fr 0.9fr; gap:64px; align-items:start; }
+  .status-badge{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono'; font-size:12px; letter-spacing:0.04em;
+    background:var(--paper-raised); border:1px solid var(--line-strong);
+    padding:6px 12px; border-radius:100px; margin-bottom:28px;
+  }
+  .status-dot{ width:7px; height:7px; border-radius:50%; background:var(--signal); animation:pulse 2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+  h1.hero-h{ font-size:52px; line-height:1.08; margin-bottom:24px; max-width:620px; }
+  .hero-sub{ font-size:18px; color:var(--graphite); max-width:520px; margin-bottom:36px; }
+  .hero-ctas{ display:flex; gap:14px; margin-bottom:64px; }
+  .stat-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .stat-tile{ background:var(--paper-raised); padding:20px 16px; }
+  .stat-num{ font-family:'IBM Plex Mono'; font-size:24px; font-weight:500; color:var(--steel-dark); }
+  .stat-label{ font-size:12px; color:var(--graphite); margin-top:4px; }
+
+  /* hero extraction visual */
+  .extract-card{
+    background:var(--paper-raised); border:1px solid var(--line-strong); border-radius:var(--radius);
+    overflow:hidden; box-shadow:0 24px 48px -24px rgba(20,24,29,0.18);
+  }
+  .extract-head{ display:flex; gap:6px; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .extract-dot{ width:8px; height:8px; border-radius:50%; background:var(--line-strong); }
+  .extract-body{ padding:20px; font-family:'IBM Plex Mono'; font-size:12.5px; line-height:1.8; }
+  .raw-text{ color:var(--graphite); }
+  .raw-text .hl{ background:rgba(201,122,61,0.18); color:var(--ink); border-radius:3px; padding:0 2px; }
+  .arrow-down{ display:flex; align-items:center; gap:8px; color:var(--line-strong); margin:14px 0; font-size:11px; }
+  .arrow-down .l{ flex:1; height:1px; background:var(--line); }
+  table.data-table{ width:100%; border-collapse:collapse; font-size:12px; }
+  table.data-table th{ text-align:left; color:var(--graphite); font-weight:500; padding:6px 8px; border-bottom:1px solid var(--line-strong); }
+  table.data-table td{ padding:6px 8px; border-bottom:1px solid var(--line); color:var(--ink); }
+  table.data-table td.num{ color:var(--steel-dark); }
+
+  .logo-row{ margin-top:80px; }
+  .logo-row-label{ font-size:12px; color:var(--graphite); margin-bottom:20px; font-family:'IBM Plex Mono'; }
+  .logo-strip{ display:flex; gap:48px; flex-wrap:wrap; align-items:center; opacity:0.55; font-family:'Space Grotesk'; font-weight:500; font-size:15px; }
+
+  /* ---------- SECTION HEADS ---------- */
+  .sec-head{ max-width:640px; margin-bottom:64px; }
+  .sec-head h2{ font-size:36px; margin-bottom:16px; }
+  .sec-head p{ color:var(--graphite); font-size:16.5px; }
+
+  /* ---------- PIPELINE ---------- */
+  .pipeline{ display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-bottom:80px; position:relative; }
+  .pipe-step{ padding:28px 24px 28px 0; position:relative; }
+  .pipe-step:not(:last-child)::after{
+    content:'→'; position:absolute; right:-4px; top:32px; color:var(--line-strong); font-size:18px;
+  }
+  .pipe-num{ font-family:'IBM Plex Mono'; font-size:12px; color:var(--signal); margin-bottom:12px; }
+  .pipe-step h3{ font-size:18px; margin-bottom:8px; }
+  .pipe-step p{ font-size:14px; color:var(--graphite); }
+
+  .before-after{ display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:80px; }
+  .ba-card{ background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius); padding:24px; }
+  .ba-label{ font-family:'IBM Plex Mono'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--graphite); margin-bottom:14px; }
+  .ba-card.raw p{ font-family:'IBM Plex Mono'; font-size:13px; line-height:1.9; color:var(--graphite); }
+  .ba-card.raw .hl{ background:rgba(201,122,61,0.18); color:var(--ink); border-radius:3px; padding:0 3px; }
+
+  .moat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .moat-item{ background:var(--paper-raised); padding:24px; }
+  .moat-item h4{ font-size:15px; font-weight:600; margin-bottom:8px; font-family:'Space Grotesk'; }
+  .moat-item p{ font-size:13.5px; color:var(--graphite); }
+
+  /* ---------- DATASET ---------- */
+  .dataset-layout{ display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:start; }
+  .coverage-table{ width:100%; border-collapse:collapse; margin-bottom:28px; }
+  .coverage-table tr{ border-bottom:1px solid var(--line); }
+  .coverage-table td{ padding:14px 0; font-size:14.5px; }
+  .coverage-table td:first-child{ color:var(--graphite); width:44%; }
+  .coverage-table td:last-child{ font-family:'IBM Plex Mono'; font-size:13.5px; color:var(--ink); }
+  .updated-tag{ font-family:'IBM Plex Mono'; font-size:12px; color:var(--steel-dark); }
+
+  .sample-card{ background:var(--paper-raised); border:1px solid var(--line-strong); border-radius:var(--radius); padding:32px; }
+  .sample-card h3{ font-size:20px; margin-bottom:10px; }
+  .sample-card p{ font-size:14px; color:var(--graphite); margin-bottom:22px; }
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .form-field{ display:flex; flex-direction:column; gap:6px; }
+  .form-field label{ font-size:12px; color:var(--graphite); font-family:'IBM Plex Mono'; }
+  .form-field input, .form-field select{
+    padding:10px 12px; border:1px solid var(--line-strong); border-radius:6px; background:var(--paper);
+    font-family:'Inter'; font-size:14px; color:var(--ink);
+  }
+  .form-field input:focus, .form-field select:focus{ outline:2px solid var(--steel); outline-offset:1px; border-color:var(--steel); }
+  .sample-card .btn{ width:100%; justify-content:center; margin-top:6px; }
+  .ethics-note{ margin-top:28px; padding-top:24px; border-top:1px solid var(--line); font-size:13px; color:var(--graphite); }
+  .ethics-note a{ color:var(--steel-dark); text-decoration:underline; }
+
+  /* ---------- TRACTION ---------- */
+  .pilot-grid{ display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:72px; }
+  .pilot-card{ background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius); padding:28px; }
+  .pilot-tag{ font-family:'IBM Plex Mono'; font-size:11px; color:var(--signal); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:12px; }
+  .pilot-card h4{ font-size:17px; margin-bottom:10px; }
+  .pilot-card p{ font-size:14px; color:var(--graphite); }
+
+  .roadmap{ display:flex; align-items:center; position:relative; padding:0 8px; }
+  .roadmap::before{ content:''; position:absolute; left:8px; right:8px; top:10px; height:1px; background:var(--line-strong); }
+  .rm-stage{ flex:1; position:relative; text-align:left; padding-top:32px; }
+  .rm-dot{ position:absolute; top:2px; left:0; width:17px; height:17px; border-radius:50%; background:var(--paper); border:2px solid var(--line-strong); }
+  .rm-stage.active .rm-dot{ border-color:var(--signal); background:var(--signal); }
+  .rm-stage h5{ font-family:'IBM Plex Mono'; font-size:13px; margin-bottom:4px; }
+  .rm-stage span{ font-size:12.5px; color:var(--graphite); }
+
+  /* ---------- TEAM ---------- */
+  .team-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:28px; margin-bottom:56px; }
+  .team-card .photo{ width:100%; aspect-ratio:1/1; border-radius:var(--radius); background:linear-gradient(135deg, var(--line) 0%, var(--paper-raised) 100%); margin-bottom:16px; border:1px solid var(--line); }
+  .team-card h4{ font-size:16px; margin-bottom:2px; }
+  .team-card .role{ font-family:'IBM Plex Mono'; font-size:12px; color:var(--steel-dark); margin-bottom:10px; }
+  .team-card p{ font-size:13.5px; color:var(--graphite); }
+  .advisors-row{ border-top:1px solid var(--line); padding-top:32px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px; }
+  .advisors-row .label{ font-family:'IBM Plex Mono'; font-size:12px; color:var(--graphite); }
+  .advisor-names{ display:flex; gap:28px; flex-wrap:wrap; font-size:14px; color:var(--ink); }
+
+  /* ---------- COMPANY ---------- */
+  .vision-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:32px; }
+  .vision-col .eyebrow{ margin-bottom:16px; }
+  .vision-col p{ font-size:15px; color:var(--graphite); }
+  .vision-col h3{ font-size:19px; margin-bottom:14px; }
+
+  /* ---------- CONTACT ---------- */
+  #contact{ border-bottom:none; }
+  .contact-grid{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .contact-card{ border:1px solid var(--line-strong); border-radius:var(--radius); padding:32px; background:var(--paper-raised); }
+  .contact-card h3{ font-size:19px; margin-bottom:10px; }
+  .contact-card p{ font-size:14px; color:var(--graphite); margin-bottom:20px; }
+  .contact-card .addr{ font-family:'IBM Plex Mono'; font-size:14px; color:var(--steel-dark); }
+
+  footer{ padding:48px 0; }
+  footer .wrap{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+  footer p{ font-size:13px; color:var(--graphite); }
+  .footer-links{ display:flex; gap:24px; font-size:13px; color:var(--graphite); }
+
+  @media (max-width: 860px){
+    .nav-links{ display:none; }
+    .hero-grid{ grid-template-columns:1fr; }
+    h1.hero-h{ font-size:36px; }
+    .stat-strip{ grid-template-columns:repeat(2,1fr); }
+    .pipeline{ grid-template-columns:1fr; }
+    .pipe-step::after{ display:none; }
+    .before-after, .moat-grid, .dataset-layout, .pilot-grid, .team-grid, .vision-grid, .contact-grid{ grid-template-columns:1fr; }
+    .roadmap{ flex-direction:column; align-items:flex-start; gap:24px; }
+    .roadmap::before{ display:none; }
+    section{ padding:72px 0; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .status-dot{ animation:none; }
+    html{ scroll-behavior:auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="logo">
+      <svg class="logo-mark" viewBox="0 0 22 22" fill="none">
+        <rect x="1" y="1" width="9" height="9" stroke="#14181D" stroke-width="1.2"/>
+        <rect x="12" y="1" width="9" height="9" stroke="#2F6E8F" stroke-width="1.2"/>
+        <rect x="1" y="12" width="9" height="9" stroke="#2F6E8F" stroke-width="1.2"/>
+        <rect x="12" y="12" width="9" height="9" stroke="#C97A3D" stroke-width="1.2"/>
+      </svg>
+      MatDB
+    </div>
+    <div class="nav-links">
+      <a href="#technology">Technology</a>
+      <a href="#dataset">Dataset</a>
+      <a href="#traction">Traction</a>
+      <a href="#team">Team</a>
+      <a href="#company">Company</a>
+    </div>
+    <div class="nav-cta">
+      <a href="#contact" class="btn btn-primary">Talk to us</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="lattice-bg"></div>
+  <div class="wrap hero-grid">
+    <div>
+      <div class="status-badge"><span class="status-dot"></span> Private beta — onboarding design partners</div>
+      <h1 class="hero-h">Turning decades of materials science literature into ML-ready data</h1>
+      <p class="hero-sub">MatDB builds large-scale, multimodal datasets from published research — text, tables, images, and spectra — powering the next generation of materials design, discovery, and process optimization tools.</p>
+      <div class="hero-ctas">
+        <a href="#contact" class="btn btn-primary">Talk to us</a>
+        <a href="#technology" class="btn btn-ghost">See how it works</a>
+      </div>
+      <div class="stat-strip">
+        <div class="stat-tile"><div class="stat-num">12,400+</div><div class="stat-label">Papers processed</div></div>
+        <div class="stat-tile"><div class="stat-num">3.8M</div><div class="stat-label">Data points extracted</div></div>
+        <div class="stat-tile"><div class="stat-num">14</div><div class="stat-label">Material classes covered</div></div>
+        <div class="stat-tile"><div class="stat-num">6</div><div class="stat-label">Active pilot partners</div></div>
+      </div>
+      <div class="logo-row">
+        <div class="logo-row-label">WORKING WITH</div>
+        <div class="logo-strip">
+          <span>Partner One</span><span>Partner Two</span><span>Partner Three</span><span>Partner Four</span>
+        </div>
+      </div>
+    </div>
+    <div class="extract-card">
+      <div class="extract-head"><div class="extract-dot"></div><div class="extract-dot"></div><div class="extract-dot"></div></div>
+      <div class="extract-body">
+        <div class="raw-text">"...the alloy exhibited a yield strength of <span class="hl">412 MPa</span> at <span class="hl">room temperature</span>, with grain size refined to <span class="hl">2.3 μm</span> after ECAP processing..."</div>
+        <div class="arrow-down"><div class="l"></div>extracted<div class="l"></div></div>
+        <table class="data-table">
+          <tr><th>Property</th><th>Value</th><th>Unit</th></tr>
+          <tr><td>Yield strength</td><td class="num">412</td><td>MPa</td></tr>
+          <tr><td>Test condition</td><td class="num">298</td><td>K</td></tr>
+          <tr><td>Grain size</td><td class="num">2.3</td><td>μm</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECHNOLOGY -->
+<section id="technology">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Technology</div>
+      <h2>From a paragraph to a structured, ML-ready data point</h2>
+      <p>Our extraction pipeline turns unstructured literature into validated, multimodal materials data — at a scale no manual process can match.</p>
+    </div>
+
+    <div class="pipeline">
+      <div class="pipe-step"><div class="pipe-num">01</div><h3>Ingest</h3><p>Papers, patents, and theses pulled from journals, repositories, and partner archives.</p></div>
+      <div class="pipe-step"><div class="pipe-num">02</div><h3>Extract</h3><p>Domain-specific entity recognition, table parsing, and figure and spectra digitization.</p></div>
+      <div class="pipe-step"><div class="pipe-num">03</div><h3>Fuse</h3><p>Text, tabular, and image or spectral data aligned to the same material and experiment.</p></div>
+      <div class="pipe-step"><div class="pipe-num">04</div><h3>Validate</h3><p>Human-in-the-loop QA against ground truth, with provenance tracked to source.</p></div>
+    </div>
+
+    <div class="moat-grid">
+      <div class="moat-item"><h4>Domain-specific extraction</h4><p>Materials nomenclature is inconsistent across papers, decades, and sub-fields — generic NER models miss most of it.</p></div>
+      <div class="moat-item"><h4>True multimodal fusion</h4><p>We align text, tables, images, and spectra to the same underlying experiment, not just OCR on a page.</p></div>
+      <div class="moat-item"><h4>Validated, not scraped</h4><p>Every extracted value is checked against reported ground truth before it enters the dataset.</p></div>
+      <div class="moat-item"><h4>Full provenance</h4><p>Every data point traces back to its exact source publication, page, and figure or table.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- DATASET -->
+<section id="dataset">
+  <div class="wrap dataset-layout">
+    <div>
+      <div class="eyebrow">Dataset</div>
+      <h2 style="font-size:32px; margin-bottom:24px;">The dataset behind the models</h2>
+      <table class="coverage-table">
+        <tr><td>Material classes</td><td>Alloys, polymers, ceramics, battery materials, catalysts</td></tr>
+        <tr><td>Modalities</td><td>Text · tables · micrographs · spectra · XRD patterns</td></tr>
+        <tr><td>Source coverage</td><td>140+ journals, 1985–present</td></tr>
+        <tr><td>Last updated</td><td class="updated-tag">August 2026</td></tr>
+      </table>
+      <p style="font-size:14px; color:var(--graphite);">Every entry is traced to its source publication and validated against reported ground truth by domain-trained reviewers before release.</p>
+    </div>
+    <div class="sample-card">
+      <h3>Download a sample dataset</h3>
+      <p>Get a representative slice of our extracted, structured data — no commitment required.</p>
+      <form action="https://formsubmit.co/matintelairoorkee@gmail.com" method="POST">
+        <input type="hidden" name="_subject" value="MatDB — sample dataset request">
+        <input type="hidden" name="_template" value="table">
+        <input type="hidden" name="_next" value="https://matdb.ai/thank-you">
+        <div class="form-row">
+          <div class="form-field"><label>NAME</label><input type="text" name="Name" placeholder="Jane Chen" required></div>
+          <div class="form-field"><label>EMAIL</label><input type="email" name="Email" placeholder="jane@fund.com" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field"><label>COMPANY</label><input type="text" name="Company" placeholder="Company or fund" required></div>
+          <div class="form-field"><label>ROLE</label>
+            <select name="Role"><option>Investor</option><option>Research partner</option><option>Industry pilot</option><option>Other</option></select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Download sample</button>
+      </form>
+      <div class="ethics-note">We respect publisher terms and maintain full attribution and provenance for every extracted data point. <a href="#">Read our data ethics policy →</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRACTION -->
+<section id="traction">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Traction</div>
+      <h2>Early validation from industry and research leaders</h2>
+      <p>We're in active pilots with organizations solving real materials discovery and process optimization problems.</p>
+    </div>
+    <div class="pilot-grid">
+      <div class="pilot-card"><div class="pilot-tag">Industry pilot</div><h4>Fortune 500 battery manufacturer</h4><p>Using extracted electrolyte and cathode data to accelerate formulation screening ahead of physical testing.</p></div>
+      <div class="pilot-card"><div class="pilot-tag">Research partner</div><h4>Leading academic materials lab</h4><p>Building a validated alloy property dataset to train property-prediction models for high-throughput screening.</p></div>
+    </div>
+    <div class="roadmap">
+      <div class="rm-stage active"><div class="rm-dot"></div><h5>Private beta</h5><span>Now</span></div>
+      <div class="rm-stage"><div class="rm-dot"></div><h5>Design partner rollout</h5><span>Q1 2027</span></div>
+      <div class="rm-stage"><div class="rm-dot"></div><h5>General availability</h5><span>Q3 2027</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="team">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Team</div>
+      <h2>Built by people who've lived this problem</h2>
+    </div>
+    <div class="team-grid">
+      <div class="team-card"><div class="photo"></div><h4>Founder name</h4><div class="role">CO-FOUNDER, CEO</div><p>Ph.D. Materials Science. Previously led high-throughput screening at [lab]. Spent years re-typing values out of PDFs by hand.</p></div>
+      <div class="team-card"><div class="photo"></div><h4>Founder name</h4><div class="role">CO-FOUNDER, CTO</div><p>Ph.D. Machine Learning. Built information-extraction systems for scientific text prior to founding MatDB.</p></div>
+      <div class="team-card"><div class="photo"></div><h4>Founder name</h4><div class="role">CO-FOUNDER, HEAD OF DATA</div><p>Former research scientist focused on alloy design; led data infrastructure for a national lab consortium.</p></div>
+    </div>
+    <div class="advisors-row">
+      <div class="label">ADVISORS</div>
+      <div class="advisor-names"><span>Advisor name, Title</span><span>Advisor name, Title</span><span>Advisor name, Title</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPANY -->
+<section id="company">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Company</div>
+      <h2>Materials discovery is too slow. We think data is the bottleneck.</h2>
+    </div>
+    <div class="vision-grid">
+      <div class="vision-col"><h3>The problem</h3><p>New materials typically take over a decade to go from discovery to deployment. Most of the relevant knowledge already exists — buried, unstructured, and unsearchable across millions of published papers.</p></div>
+      <div class="vision-col"><h3>Our bet</h3><p>Structured, multimodal data unlocks AI tools that can meaningfully compress that timeline — but only if the underlying data is accurate, validated, and traceable to its source.</p></div>
+      <div class="vision-col"><h3>Where we're headed</h3><p>From a data provider today to the default data and modeling layer materials teams build on — spanning discovery, formulation, and process optimization.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Contact</div>
+      <h2>Let's talk</h2>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <h3>Investors</h3>
+        <p>Reach out directly for our deck, data room access, or to schedule time with the founders.</p>
+        <form action="https://formsubmit.co/matintelairoorkee@gmail.com" method="POST">
+          <input type="hidden" name="_subject" value="MatDB — investor inquiry">
+          <input type="hidden" name="_template" value="table">
+          <div class="form-field" style="margin-bottom:12px;"><label>NAME</label><input type="text" name="Name" required></div>
+          <div class="form-field" style="margin-bottom:12px;"><label>EMAIL</label><input type="email" name="Email" required></div>
+          <div class="form-field" style="margin-bottom:16px;"><label>MESSAGE</label><input type="text" name="Message" placeholder="Fund, check size, what you're looking for"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Send</button>
+        </form>
+        <div class="addr" style="margin-top:16px;">matintelairoorkee@gmail.com</div>
+      </div>
+      <div class="contact-card">
+        <h3>Partners &amp; pilots</h3>
+        <p>Interested in piloting MatDB's data or tools at your organization? We'd like to hear about your use case.</p>
+        <form action="https://formsubmit.co/matintelairoorkee@gmail.com" method="POST">
+          <input type="hidden" name="_subject" value="MatDB — partnership inquiry">
+          <input type="hidden" name="_template" value="table">
+          <div class="form-field" style="margin-bottom:12px;"><label>NAME</label><input type="text" name="Name" required></div>
+          <div class="form-field" style="margin-bottom:12px;"><label>EMAIL</label><input type="email" name="Email" required></div>
+          <div class="form-field" style="margin-bottom:16px;"><label>MESSAGE</label><input type="text" name="Message" placeholder="Your use case"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Send</button>
+        </form>
+        <div class="addr" style="margin-top:16px;">matintelairoorkee@gmail.com</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>© 2026 Mat Intel AI Pvt. Ltd. All rights reserved.</p>
+    <div class="footer-links"><a href="#">Privacy</a><a href="#">Data ethics</a><a href="#">LinkedIn</a></div>
+  </div>
+</footer>
+
+</body>
+</html>
